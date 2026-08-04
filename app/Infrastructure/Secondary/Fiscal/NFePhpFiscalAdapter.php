@@ -37,7 +37,13 @@ class NFePhpFiscalAdapter implements NFeFiscalGatewayInterface
             'versao' => '4.00',
         ], $config);
 
-        $this->certPfxContent = $certPfxContent ?? config('nfe.cert_pfx');
+        $certPath = config('nfe.cert_path');
+        if ($certPfxContent === null && !empty($certPath) && file_exists($certPath)) {
+            $this->certPfxContent = file_get_contents($certPath);
+        } else {
+            $this->certPfxContent = $certPfxContent;
+        }
+
         $this->certPassword = $certPassword ?? config('nfe.cert_password', '');
     }
 

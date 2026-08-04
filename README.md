@@ -138,6 +138,32 @@ app/
 
 ---
 
+## Configuração do Certificado Digital A1 (.pfx) e Testes
+
+### 1. Onde colocar o Certificado Digital?
+Coloque o seu arquivo `.pfx` ou `.p12` no diretório de storage da aplicação (ex: `storage/app/cert/certificado.pfx`). Este diretório já se encontra ignorado no `.gitignore`.
+
+### 2. Configurar o `.env`:
+```env
+# 1 = Produção, 2 = Homologação
+NFE_ENVIRONMENT=2
+
+# Dados da Empresa Emitente
+NFE_COMPANY_NAME="Sua Empresa LTDA"
+NFE_COMPANY_CNPJ="12345678000195"
+NFE_COMPANY_UF="SP"
+
+# Certificado Digital A1 (.pfx)
+NFE_CERT_PATH="/caminho/absoluto/ou/relativo/para/certificado.pfx"
+NFE_CERT_PASSWORD="sua_senha_do_certificado"
+```
+
+### 3. Modos de Teste:
+- Sem Certificado (Modo Mock Local): Se a variável `NFE_CERT_PATH` estiver vazia, o sistema gera a estrutura do XML da NFe v4.00 e simula a transmissão, salvando os arquivos em `storage/app/nfe/xml/`. Útil para validar contratos da API HTTP localmente.
+- Com Certificado (Homologação Real SEFAZ): Com a chave `NFE_CERT_PATH` e `NFE_CERT_PASSWORD` preenchidas, a aplicação assina digitalmente a nota com o certificado A1, transmite via SOAP para a SEFAZ de homologação, gera o DANFE em PDF e salva os arquivos em `storage/app/nfe/`.
+
+---
+
 ## Documentação Complementar
 
 - [`AGENT.md`](file:///home/gabriel/Documents/git/php-nfe/AGENT.md) — Diretrizes arquiteturais e regras para desenvolvimento.
