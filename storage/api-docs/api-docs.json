@@ -1,0 +1,372 @@
+{
+    "openapi": "3.0.0",
+    "info": {
+        "title": "PHP-NFe API",
+        "description": "API RESTful for NFe issuance and cancellation using Hexagonal Architecture & NFePHP",
+        "version": "1.0.0"
+    },
+    "servers": [
+        {
+            "url": "http://localhost:8000",
+            "description": "Local Development Server"
+        }
+    ],
+    "paths": {
+        "/api/nfe/emitir": {
+            "post": {
+                "tags": [
+                    "NFe"
+                ],
+                "summary": "Emitir NFe / NFCe",
+                "description": "Generates NFe XML, signs with Certificate A1, transmits to SEFAZ, and returns DANFE PDF path",
+                "operationId": "c246edc8ec2f65661020a8cecdfa05ee",
+                "requestBody": {
+                    "description": "NFe issuance payload with generic example data",
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "modelo",
+                                    "serie",
+                                    "numero",
+                                    "natureza_operacao",
+                                    "valor_total",
+                                    "emitente",
+                                    "destinatario",
+                                    "produtos"
+                                ],
+                                "properties": {
+                                    "modelo": {
+                                        "type": "string",
+                                        "example": "55"
+                                    },
+                                    "serie": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "numero": {
+                                        "type": "integer",
+                                        "example": 101
+                                    },
+                                    "natureza_operacao": {
+                                        "type": "string",
+                                        "example": "Venda de Mercadoria"
+                                    },
+                                    "valor_total": {
+                                        "type": "number",
+                                        "format": "float",
+                                        "example": 150
+                                    },
+                                    "emitente": {
+                                        "properties": {
+                                            "cnpj": {
+                                                "type": "string",
+                                                "example": "00000000000000"
+                                            },
+                                            "razao_social": {
+                                                "type": "string",
+                                                "example": "EMPRESA EMITENTE EXEMPLO LTDA"
+                                            },
+                                            "nome_fantasia": {
+                                                "type": "string",
+                                                "example": "EMPRESA TESTE"
+                                            },
+                                            "inscricao_estadual": {
+                                                "type": "string",
+                                                "example": "000000000"
+                                            },
+                                            "crt": {
+                                                "type": "string",
+                                                "example": "1"
+                                            },
+                                            "endereco": {
+                                                "properties": {
+                                                    "logradouro": {
+                                                        "type": "string",
+                                                        "example": "RUA EXEMPLO"
+                                                    },
+                                                    "numero": {
+                                                        "type": "string",
+                                                        "example": "100"
+                                                    },
+                                                    "bairro": {
+                                                        "type": "string",
+                                                        "example": "CENTRO"
+                                                    },
+                                                    "codigo_municipio": {
+                                                        "type": "string",
+                                                        "example": "3550308"
+                                                    },
+                                                    "nome_municipio": {
+                                                        "type": "string",
+                                                        "example": "SAO PAULO"
+                                                    },
+                                                    "uf": {
+                                                        "type": "string",
+                                                        "example": "SP"
+                                                    },
+                                                    "cep": {
+                                                        "type": "string",
+                                                        "example": "01001000"
+                                                    }
+                                                },
+                                                "type": "object"
+                                            }
+                                        },
+                                        "type": "object"
+                                    },
+                                    "destinatario": {
+                                        "properties": {
+                                            "cnpj_cpf": {
+                                                "type": "string",
+                                                "example": "11111111000111"
+                                            },
+                                            "razao_social": {
+                                                "type": "string",
+                                                "example": "CLIENTE DESTINATARIO EXEMPLO LTDA"
+                                            },
+                                            "indicador_ie": {
+                                                "type": "string",
+                                                "example": "9"
+                                            },
+                                            "endereco": {
+                                                "properties": {
+                                                    "logradouro": {
+                                                        "type": "string",
+                                                        "example": "AVENIDA EXEMPLO"
+                                                    },
+                                                    "numero": {
+                                                        "type": "string",
+                                                        "example": "200"
+                                                    },
+                                                    "bairro": {
+                                                        "type": "string",
+                                                        "example": "BELA VISTA"
+                                                    },
+                                                    "codigo_municipio": {
+                                                        "type": "string",
+                                                        "example": "3550308"
+                                                    },
+                                                    "nome_municipio": {
+                                                        "type": "string",
+                                                        "example": "SAO PAULO"
+                                                    },
+                                                    "uf": {
+                                                        "type": "string",
+                                                        "example": "SP"
+                                                    },
+                                                    "cep": {
+                                                        "type": "string",
+                                                        "example": "01310000"
+                                                    }
+                                                },
+                                                "type": "object"
+                                            }
+                                        },
+                                        "type": "object"
+                                    },
+                                    "produtos": {
+                                        "type": "array",
+                                        "items": {
+                                            "properties": {
+                                                "codigo": {
+                                                    "type": "string",
+                                                    "example": "PROD-001"
+                                                },
+                                                "descricao": {
+                                                    "type": "string",
+                                                    "example": "PRODUTO TESTE EXEMPLO"
+                                                },
+                                                "ncm": {
+                                                    "type": "string",
+                                                    "example": "84713012"
+                                                },
+                                                "cfop": {
+                                                    "type": "string",
+                                                    "example": "5102"
+                                                },
+                                                "unidade_comercial": {
+                                                    "type": "string",
+                                                    "example": "UN"
+                                                },
+                                                "quantidade_comercial": {
+                                                    "type": "number",
+                                                    "example": 1
+                                                },
+                                                "valor_unitario_comercial": {
+                                                    "type": "number",
+                                                    "example": 150
+                                                },
+                                                "valor_total_bruto": {
+                                                    "type": "number",
+                                                    "example": 150
+                                                },
+                                                "imposto": {
+                                                    "properties": {
+                                                        "icms": {
+                                                            "properties": {
+                                                                "cst": {
+                                                                    "type": "string",
+                                                                    "example": "40"
+                                                                }
+                                                            },
+                                                            "type": "object"
+                                                        },
+                                                        "pis": {
+                                                            "properties": {
+                                                                "cst": {
+                                                                    "type": "string",
+                                                                    "example": "09"
+                                                                }
+                                                            },
+                                                            "type": "object"
+                                                        },
+                                                        "cofins": {
+                                                            "properties": {
+                                                                "cst": {
+                                                                    "type": "string",
+                                                                    "example": "09"
+                                                                }
+                                                            },
+                                                            "type": "object"
+                                                        }
+                                                    },
+                                                    "type": "object"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "NFe issued successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "sucesso": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "chave_nfe": {
+                                            "type": "string",
+                                            "example": "35240800000000000000550010000001011000001010"
+                                        },
+                                        "xml_path": {
+                                            "type": "string",
+                                            "example": "nfe/xml/35240800000000000000550010000001011000001010.xml"
+                                        },
+                                        "pdf_path": {
+                                            "type": "string",
+                                            "example": "nfe/pdf/35240800000000000000550010000001011000001010.pdf"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "SEFAZ Rejection or Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "sucesso": {
+                                            "type": "boolean",
+                                            "example": false
+                                        },
+                                        "erro": {
+                                            "type": "string",
+                                            "example": "Rejeição SEFAZ [cStat 999]: Motivo da rejeição"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/nfe/cancelar": {
+            "post": {
+                "tags": [
+                    "NFe"
+                ],
+                "summary": "Cancelar NFe",
+                "description": "Transmits cancellation event for an authorized NFe to SEFAZ",
+                "operationId": "d71321fbc7a95c31a5ea2b87c8d0c764",
+                "requestBody": {
+                    "description": "Cancellation payload with generic example data",
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "id_lote",
+                                    "c_orgao",
+                                    "cnpj",
+                                    "chave_nfe",
+                                    "data_hora_evento",
+                                    "numero_protocolo",
+                                    "justificativa"
+                                ],
+                                "properties": {
+                                    "chave_nfe": {
+                                        "type": "string",
+                                        "example": "35240800000000000000550010000001011000001010"
+                                    },
+                                    "numero_protocolo": {
+                                        "type": "string",
+                                        "example": "135240001234567"
+                                    },
+                                    "justificativa": {
+                                        "type": "string",
+                                        "example": "Cancelamento solicitado pelo cliente devido a erro no pedido"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "NFe cancelled successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "sucesso": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "xml_path": {
+                                            "type": "string",
+                                            "example": "nfe/cancelamento/evento.xml"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "tags": [
+        {
+            "name": "NFe",
+            "description": "NFe"
+        }
+    ]
+}

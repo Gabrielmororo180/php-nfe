@@ -15,7 +15,7 @@ use App\Core\Domain\Entities\Produto;
 use App\Infrastructure\Primary\Http\Requests\CancelarNFeRequest;
 use App\Infrastructure\Primary\Http\Requests\EmitirNFeRequest;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Routing\Controller;
+use OpenApi\Attributes as OA;
 use Throwable;
 
 /**
@@ -23,9 +23,96 @@ use Throwable;
  */
 class NFeController extends Controller
 {
-    /**
-     * Endpoint for issuing an NFe document.
-     */
+    #[OA\Post(
+        path: '/api/nfe/emitir',
+        summary: 'Emitir NFe / NFCe',
+        description: 'Generates NFe XML, signs with Certificate A1, transmits to SEFAZ, and returns DANFE PDF path',
+        tags: ['NFe']
+    )]
+    #[OA\RequestBody(
+        required: true,
+        description: 'NFe issuance payload with generic example data',
+        content: new OA\JsonContent(
+            required: ['modelo', 'serie', 'numero', 'natureza_operacao', 'valor_total', 'emitente', 'destinatario', 'produtos'],
+            properties: [
+                new OA\Property(property: 'modelo', type: 'string', example: '55'),
+                new OA\Property(property: 'serie', type: 'integer', example: 1),
+                new OA\Property(property: 'numero', type: 'integer', example: 101),
+                new OA\Property(property: 'natureza_operacao', type: 'string', example: 'Venda de Mercadoria'),
+                new OA\Property(property: 'valor_total', type: 'number', format: 'float', example: 150.00),
+                new OA\Property(property: 'emitente', type: 'object', properties: [
+                    new OA\Property(property: 'cnpj', type: 'string', example: '00000000000000'),
+                    new OA\Property(property: 'razao_social', type: 'string', example: 'EMPRESA EMITENTE EXEMPLO LTDA'),
+                    new OA\Property(property: 'nome_fantasia', type: 'string', example: 'EMPRESA TESTE'),
+                    new OA\Property(property: 'inscricao_estadual', type: 'string', example: '000000000'),
+                    new OA\Property(property: 'crt', type: 'string', example: '1'),
+                    new OA\Property(property: 'endereco', type: 'object', properties: [
+                        new OA\Property(property: 'logradouro', type: 'string', example: 'RUA EXEMPLO'),
+                        new OA\Property(property: 'numero', type: 'string', example: '100'),
+                        new OA\Property(property: 'bairro', type: 'string', example: 'CENTRO'),
+                        new OA\Property(property: 'codigo_municipio', type: 'string', example: '3550308'),
+                        new OA\Property(property: 'nome_municipio', type: 'string', example: 'SAO PAULO'),
+                        new OA\Property(property: 'uf', type: 'string', example: 'SP'),
+                        new OA\Property(property: 'cep', type: 'string', example: '01001000'),
+                    ]),
+                ]),
+                new OA\Property(property: 'destinatario', type: 'object', properties: [
+                    new OA\Property(property: 'cnpj_cpf', type: 'string', example: '11111111000111'),
+                    new OA\Property(property: 'razao_social', type: 'string', example: 'CLIENTE DESTINATARIO EXEMPLO LTDA'),
+                    new OA\Property(property: 'indicador_ie', type: 'string', example: '9'),
+                    new OA\Property(property: 'endereco', type: 'object', properties: [
+                        new OA\Property(property: 'logradouro', type: 'string', example: 'AVENIDA EXEMPLO'),
+                        new OA\Property(property: 'numero', type: 'string', example: '200'),
+                        new OA\Property(property: 'bairro', type: 'string', example: 'BELA VISTA'),
+                        new OA\Property(property: 'codigo_municipio', type: 'string', example: '3550308'),
+                        new OA\Property(property: 'nome_municipio', type: 'string', example: 'SAO PAULO'),
+                        new OA\Property(property: 'uf', type: 'string', example: 'SP'),
+                        new OA\Property(property: 'cep', type: 'string', example: '01310000'),
+                    ]),
+                ]),
+                new OA\Property(property: 'produtos', type: 'array', items: new OA\Items(
+                    type: 'object',
+                    properties: [
+                        new OA\Property(property: 'codigo', type: 'string', example: 'PROD-001'),
+                        new OA\Property(property: 'descricao', type: 'string', example: 'PRODUTO TESTE EXEMPLO'),
+                        new OA\Property(property: 'ncm', type: 'string', example: '84713012'),
+                        new OA\Property(property: 'cfop', type: 'string', example: '5102'),
+                        new OA\Property(property: 'unidade_comercial', type: 'string', example: 'UN'),
+                        new OA\Property(property: 'quantidade_comercial', type: 'number', example: 1.0),
+                        new OA\Property(property: 'valor_unitario_comercial', type: 'number', example: 150.00),
+                        new OA\Property(property: 'valor_total_bruto', type: 'number', example: 150.00),
+                        new OA\Property(property: 'imposto', type: 'object', properties: [
+                            new OA\Property(property: 'icms', type: 'object', properties: [new OA\Property(property: 'cst', type: 'string', example: '40')]),
+                            new OA\Property(property: 'pis', type: 'object', properties: [new OA\Property(property: 'cst', type: 'string', example: '09')]),
+                            new OA\Property(property: 'cofins', type: 'object', properties: [new OA\Property(property: 'cst', type: 'string', example: '09')]),
+                        ]),
+                    ]
+                )),
+            ]
+        )
+    )]
+    #[OA\Response(
+        response: 201,
+        description: 'NFe issued successfully',
+        content: new OA\JsonContent(
+            properties: [
+                new OA\Property(property: 'sucesso', type: 'boolean', example: true),
+                new OA\Property(property: 'chave_nfe', type: 'string', example: '35240800000000000000550010000001011000001010'),
+                new OA\Property(property: 'xml_path', type: 'string', example: 'nfe/xml/35240800000000000000550010000001011000001010.xml'),
+                new OA\Property(property: 'pdf_path', type: 'string', example: 'nfe/pdf/35240800000000000000550010000001011000001010.pdf'),
+            ]
+        )
+    )]
+    #[OA\Response(
+        response: 400,
+        description: 'SEFAZ Rejection or Validation Error',
+        content: new OA\JsonContent(
+            properties: [
+                new OA\Property(property: 'sucesso', type: 'boolean', example: false),
+                new OA\Property(property: 'erro', type: 'string', example: 'Rejeição SEFAZ [cStat 999]: Motivo da rejeição'),
+            ]
+        )
+    )]
     public function emitir(EmitirNFeRequest $request, EmitirNFeUseCase $useCase): JsonResponse
     {
         try {
@@ -168,20 +255,45 @@ class NFeController extends Controller
         }
     }
 
-    /**
-     * Endpoint for cancelling an NFe document.
-     */
+    #[OA\Post(
+        path: '/api/nfe/cancelar',
+        summary: 'Cancelar NFe',
+        description: 'Transmits cancellation event for an authorized NFe to SEFAZ',
+        tags: ['NFe']
+    )]
+    #[OA\RequestBody(
+        required: true,
+        description: 'Cancellation payload with generic example data',
+        content: new OA\JsonContent(
+            required: ['id_lote', 'c_orgao', 'cnpj', 'chave_nfe', 'data_hora_evento', 'numero_protocolo', 'justificativa'],
+            properties: [
+                new OA\Property(property: 'chave_nfe', type: 'string', example: '35240800000000000000550010000001011000001010'),
+                new OA\Property(property: 'numero_protocolo', type: 'string', example: '135240001234567'),
+                new OA\Property(property: 'justificativa', type: 'string', example: 'Cancelamento solicitado pelo cliente devido a erro no pedido'),
+            ]
+        )
+    )]
+    #[OA\Response(
+        response: 200,
+        description: 'NFe cancelled successfully',
+        content: new OA\JsonContent(
+            properties: [
+                new OA\Property(property: 'sucesso', type: 'boolean', example: true),
+                new OA\Property(property: 'xml_path', type: 'string', example: 'nfe/cancelamento/evento.xml'),
+            ]
+        )
+    )]
     public function cancelar(CancelarNFeRequest $request, CancelarNFeUseCase $useCase): JsonResponse
     {
         try {
             $validated = $request->validated();
 
             $inputDto = new CancelarNFeInputDto(
-                idLote: $validated['id_lote'],
-                cOrgao: $validated['c_orgao'],
-                cnpj: $validated['cnpj'],
+                idLote: $validated['id_lote'] ?? '1',
+                cOrgao: $validated['c_orgao'] ?? '35',
+                cnpj: $validated['cnpj'] ?? '00000000000000',
                 chaveNFe: $validated['chave_nfe'],
-                dataHoraEvento: $validated['data_hora_evento'],
+                dataHoraEvento: $validated['data_hora_evento'] ?? date('Y-m-d\TH:i:sP'),
                 numeroProtocolo: $validated['numero_protocolo'],
                 justificativa: $validated['justificativa']
             );
