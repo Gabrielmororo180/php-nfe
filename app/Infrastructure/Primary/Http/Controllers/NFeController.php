@@ -73,22 +73,43 @@ class NFeController extends Controller
 
             $produtos = [];
             foreach ($validated['produtos'] as $item) {
+                $icmsCst = $item['imposto']['icms']['cst']
+                    ?? $item['imposto']['ICMS']['CST']
+                    ?? $item['impostos']['icms']['cst']
+                    ?? $item['impostos']['ICMS']['CST']
+                    ?? $item['icms_cst']
+                    ?? '102';
+
+                $pisCst = $item['imposto']['pis']['cst']
+                    ?? $item['imposto']['PIS']['CST']
+                    ?? $item['impostos']['pis']['cst']
+                    ?? $item['impostos']['PIS']['CST']
+                    ?? $item['pis_cst']
+                    ?? '09';
+
+                $cofinsCst = $item['imposto']['cofins']['cst']
+                    ?? $item['imposto']['COFINS']['CST']
+                    ?? $item['impostos']['cofins']['cst']
+                    ?? $item['impostos']['COFINS']['CST']
+                    ?? $item['cofins_cst']
+                    ?? '09';
+
                 $icms = new ImpostoDetalhe(
-                    cst: $item['icms_cst'],
+                    cst: (string) $icmsCst,
                     baseCalculo: (float) ($item['icms_base'] ?? $item['valor_total_bruto']),
                     aliquota: (float) ($item['icms_aliquota'] ?? 0),
                     valor: (float) ($item['icms_valor'] ?? 0)
                 );
 
                 $pis = new ImpostoDetalhe(
-                    cst: $item['pis_cst'] ?? '07',
+                    cst: (string) $pisCst,
                     baseCalculo: (float) ($item['pis_base'] ?? 0),
                     aliquota: (float) ($item['pis_aliquota'] ?? 0),
                     valor: (float) ($item['pis_valor'] ?? 0)
                 );
 
                 $cofins = new ImpostoDetalhe(
-                    cst: $item['cofins_cst'] ?? '07',
+                    cst: (string) $cofinsCst,
                     baseCalculo: (float) ($item['cofins_base'] ?? 0),
                     aliquota: (float) ($item['cofins_aliquota'] ?? 0),
                     valor: (float) ($item['cofins_valor'] ?? 0)

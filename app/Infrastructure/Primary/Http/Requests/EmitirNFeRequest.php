@@ -41,7 +41,11 @@ class EmitirNFeRequest extends FormRequest
             'produtos.*.quantidade_comercial' => 'required|numeric|gt:0',
             'produtos.*.valor_unitario_comercial' => 'required|numeric|gt:0',
             'produtos.*.valor_total_bruto' => 'required|numeric|gt:0',
-            'produtos.*.icms_cst' => 'required|string',
+            'produtos.*.icms_cst' => 'nullable|string',
+            'produtos.*.pis_cst' => 'nullable|string',
+            'produtos.*.cofins_cst' => 'nullable|string',
+            'produtos.*.imposto' => 'nullable|array',
+            'produtos.*.impostos' => 'nullable|array',
             'valor_total' => 'required|numeric|gt:0',
         ];
     }

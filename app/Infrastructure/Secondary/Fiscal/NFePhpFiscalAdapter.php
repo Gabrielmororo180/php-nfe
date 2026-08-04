@@ -15,6 +15,14 @@ use NFePHP\NFe\Tools;
 use NFePHP\NFe\Common\Standardize;
 use Throwable;
 
+// Fallback SOAP constants for environments where ext-soap CLI is pending installation
+if (!defined('SOAP_1_2')) {
+    define('SOAP_1_2', 2);
+}
+if (!defined('SOAP_1_1')) {
+    define('SOAP_1_1', 1);
+}
+
 /**
  * Secondary adapter implementing fiscal operations with SEFAZ using the NFePHP library.
  */
@@ -105,10 +113,11 @@ class NFePhpFiscalAdapter implements NFeFiscalGatewayInterface
         try {
             $ufEmitente = strtoupper($nfe->emitente->endereco->uf);
             $codigoUfEmitente = $this->getCodigoUf($ufEmitente);
+            $emitCnpjCpf = preg_replace('/\D/', '', $nfe->emitente->cnpj);
 
             $this->config['siglaUF'] = $ufEmitente;
-            $this->config['cnpj'] = preg_replace('/\D/', '', $nfe->emitente->cnpj);
             $this->config['razaosocial'] = $nfe->emitente->razaoSocial;
+            $this->config['cnpj'] = $emitCnpjCpf;
 
             // 1. Build NFe XML structure using NFePHP Make
             $make = new Make();
@@ -117,11 +126,11 @@ class NFePhpFiscalAdapter implements NFeFiscalGatewayInterface
             $std = new \stdClass();
             $std->versao = '4.00';
             $make->taginfNFe($std);
-
+            
             // ide tag
             $std = new \stdClass();
             $std->cUF = $codigoUfEmitente;
-            $std->cNF = sprintf('%08d', rand(1, 99999999));
+            $std->cNF = sprintf('%08d', rand(10000000, 99999999));
             $std->natOp = $nfe->naturezaOperacao;
             $std->mod = (int) $nfe->modelo;
             $std->serie = $nfe->serie;
@@ -132,7 +141,7 @@ class NFePhpFiscalAdapter implements NFeFiscalGatewayInterface
             $std->cMunFG = (int) $nfe->emitente->endereco->codigoMunicipio;
             $std->tpImp = 1; // 1: Retrato
             $std->tpEmis = 1; // 1: Normal
-            $std->tpAmb = $this->config['tpAmb'];
+            $std->tpAmb = 2; // 2: Homologação
             $std->finNFe = 1; // 1: Normal
             $std->indFinal = 1;
             $std->indPres = 1;
@@ -146,7 +155,6 @@ class NFePhpFiscalAdapter implements NFeFiscalGatewayInterface
             $std->xFant = $nfe->emitente->nomeFantasia;
             $std->IE = $nfe->emitente->inscricaoEstadual;
             $std->CRT = (int) $nfe->emitente->crt;
-            $emitCnpjCpf = preg_replace('/\D/', '', $nfe->emitente->cnpj);
             if (strlen($emitCnpjCpf) === 14) {
                 $std->CNPJ = $emitCnpjCpf;
             } else {
@@ -208,11 +216,38 @@ class NFePhpFiscalAdapter implements NFeFiscalGatewayInterface
                 $make->tagprod($std);
 
                 // ICMS tag
+                $icmsCst = (string) ($prod->impostos->icms->cst ?? '102');
                 $std = new \stdClass();
                 $std->item = $nItem;
                 $std->orig = 0;
-                $std->CSOSN = $prod->impostos->icms->cst ?? '102';
-                $make->tagICMSSN($std);
+
+                if (strlen($icmsCst) === 3) {
+                    $std->CSOSN = $icmsCst;
+                    $make->tagICMSSN($std);
+                } else {
+                    $std->CST = sprintf('%02d', (int) $icmsCst);
+                    $make->tagICMS($std);
+                }
+
+                // PIS tag
+                $pisCst = sprintf('%02d', (int) ($prod->impostos->pis->cst ?? '09'));
+                $std = new \stdClass();
+                $std->item = $nItem;
+                $std->CST = $pisCst;
+                $std->vBC = (float) $prod->impostos->pis->baseCalculo;
+                $std->pPIS = (float) $prod->impostos->pis->aliquota;
+                $std->vPIS = (float) $prod->impostos->pis->valor;
+                $make->tagPIS($std);
+
+                // COFINS tag
+                $cofinsCst = sprintf('%02d', (int) ($prod->impostos->cofins->cst ?? '09'));
+                $std = new \stdClass();
+                $std->item = $nItem;
+                $std->CST = $cofinsCst;
+                $std->vBC = (float) $prod->impostos->cofins->baseCalculo;
+                $std->pCOFINS = (float) $prod->impostos->cofins->aliquota;
+                $std->vCOFINS = (float) $prod->impostos->cofins->valor;
+                $make->tagCOFINS($std);
             }
 
             // icmstot tag
@@ -267,27 +302,33 @@ class NFePhpFiscalAdapter implements NFeFiscalGatewayInterface
             // Sign XML
             $xmlSigned = $tools->signNFe($xmlUnsigned);
 
-            // Transmit batch to SEFAZ
+            // Transmit batch synchronously to SEFAZ (indSinc = 1 for single invoice batches)
             $idLote = str_pad((string) rand(1, 999999999), 15, '0', STR_PAD_LEFT);
-            $responseSefazXml = $tools->sefazEnviaLote([$xmlSigned], $idLote);
+            $responseSefazXml = $tools->sefazEnviaLote([$xmlSigned], $idLote, 1);
 
             $st = new Standardize();
             $stdResp = $st->toStd($responseSefazXml);
 
-            if (isset($stdResp->cStat) && !in_array((int) $stdResp->cStat, [100, 103, 104], true)) {
+            $cStatLote = $stdResp->cStat ?? null;
+            $cStatProt = $stdResp->protNFe->infProt->cStat ?? null;
+            $xMotivoProt = $stdResp->protNFe->infProt->xMotivo ?? ($stdResp->xMotivo ?? 'Erro na transmissão');
+
+            if ($cStatProt && !in_array((int) $cStatProt, [100, 150], true)) {
                 return new RespostaEmissaoGateway(
                     sucesso: false,
-                    erro: "Rejeição SEFAZ [cStat {$stdResp->cStat}]: " . ($stdResp->xMotivo ?? 'Erro na transmissão')
+                    erro: "Rejeição SEFAZ [cStat {$cStatProt}]: {$xMotivoProt}"
+                );
+            }
+
+            if ($cStatLote && !in_array((int) $cStatLote, [100, 103, 104], true)) {
+                return new RespostaEmissaoGateway(
+                    sucesso: false,
+                    erro: "Rejeição SEFAZ [cStat {$cStatLote}]: {$xMotivoProt}"
                 );
             }
 
             // Attach SEFAZ authorization protocol (<protNFe>) to XML
-            $xmlWithProtocol = $xmlSigned;
-            try {
-                $xmlWithProtocol = Complements::toAuthorize($xmlSigned, $responseSefazXml);
-            } catch (Throwable $e) {
-                // Keep signed XML if protocol attachment is pending async consultation
-            }
+            $xmlWithProtocol = Complements::toAuthorize($xmlSigned, $responseSefazXml);
 
             // Generate DANFE PDF with authorized XML
             $danfe = new Danfe($xmlWithProtocol);
