@@ -151,12 +151,21 @@ class NFePhpFiscalAdapter implements NFeFiscalGatewayInterface
             $xmlUnsigned = $make->getXML();
             $chaveNFe = $make->getChave();
 
-            // 2. If certificate is missing (e.g. mock/homologation mode), return generated XML & key
+            // 2. If certificate is missing (e.g. mock/homologation mode), render DANFE PDF and return
             if (empty($this->certPfxContent)) {
+                $pdfContent = null;
+                try {
+                    $danfe = new Danfe($xmlUnsigned);
+                    $danfe->monta();
+                    $pdfContent = $danfe->render();
+                } catch (Throwable $e) {
+                    // Log or handle optional PDF rendering notice
+                }
+
                 return new RespostaEmissaoGateway(
                     sucesso: true,
                     xml: $xmlUnsigned,
-                    pdfPath: null,
+                    pdfPath: $pdfContent,
                     chaveNFe: $chaveNFe
                 );
             }
