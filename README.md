@@ -1,59 +1,145 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# PHP-NFe: API de Emissão de Nota Fiscal Eletrônica em Laravel (Arquitetura Hexagonal & SOLID)
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+API RESTful para emissão e cancelamento de Notas Fiscais Eletrônicas (NFe/NFCe), desenvolvida em Laravel 12 (PHP 8.2+) utilizando Arquitetura Hexagonal (Ports & Adapters), Domain-Driven Design (DDD) e os princípios SOLID.
 
-## About Laravel
+---
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## Principais Recursos
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+- Regra de Negócio Isolada: A camada Core/Domain é 100% PHP puro, livre de dependências de banco de dados, HTTP ou do próprio Laravel.
+- Integração Fiscal via NFePHP: Utiliza nfephp-org/sped-nfe e nfephp-org/sped-da (PHP puro), eliminando problemas de compilação de binários nativos C (.so) em containers Docker.
+- Inversão de Dependências (DIP): Troca simples de provedores (ex: alterar de armazenamento local para AWS S3 ou substituir a biblioteca fiscal) sem alterar a regra de negócio.
+- Endpoints Prontos para Uso: Interfaces de entrada HTTP para emissão e cancelamento com validações estritas via Form Requests.
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+---
 
-## Learning Laravel
+## Arquitetura do Projeto
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+```text
+app/
+├── Core/                               # Regra de Negócio Pura (PHP 8.2+)
+│   ├── Domain/                         # Entidades, Value Objects e Invariantes do Negócio
+│   │   ├── Entities/                   # NFe, Produto, Emitente, Destinatario, Impostos, etc.
+│   │   └── Exceptions/                 # Exceções do Domínio
+│   │
+│   └── Application/                    # Casos de Uso (Actions) & Portas (Interfaces)
+│       ├── Ports/Outbound/             # Interfaces de Saída (NFeFiscalGateway, FileStorage)
+│       ├── DTOs/                       # Objetos de Transferência de Dados Imutáveis
+│       └── UseCases/                   # EmitirNFeUseCase, CancelarNFeUseCase
+│
+└── Infrastructure/                     # Adapters Concretos & Laravel Glue
+    ├── Primary/                        # Driving Adapters (NFeController, Requests, Routes)
+    └── Secondary/                      # Driven Adapters (NFePhpFiscalAdapter, LocalStorage)
+```
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+---
 
-## Laravel Sponsors
+## Endpoints da API
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+### 1. Emitir NFe / NFCe
+- URL: `POST /api/nfe/emitir`
+- Header: `Content-Type: application/json`
+- Payload de Exemplo:
 
-### Premium Partners
+```json
+{
+  "modelo": "55",
+  "serie": 1,
+  "numero": 101,
+  "natureza_operacao": "Venda de Mercadoria",
+  "valor_total": 150.00,
+  "emitente": {
+    "cnpj": "12345678000195",
+    "razao_social": "Empresa Emitente LTDA",
+    "nome_fantasia": "Empresa Teste",
+    "inscricao_estadual": "123456789",
+    "crt": "1",
+    "endereco": {
+      "logradouro": "Rua das Flores",
+      "numero": "100",
+      "bairro": "Centro",
+      "codigo_municipio": "3550308",
+      "nome_municipio": "São Paulo",
+      "uf": "SP",
+      "cep": "01001000"
+    }
+  },
+  "destinatario": {
+    "cnpj_cpf": "98765432000100",
+    "razao_social": "Cliente Destinatario LTDA",
+    "endereco": {
+      "logradouro": "Av Paulista",
+      "numero": "1000",
+      "bairro": "Bela Vista",
+      "codigo_municipio": "3550308",
+      "nome_municipio": "São Paulo",
+      "uf": "SP",
+      "cep": "01310100"
+    }
+  },
+  "produtos": [
+    {
+      "codigo": "PROD-001",
+      "descricao": "Item de Teste NFe",
+      "ncm": "84713012",
+      "cfop": "5102",
+      "unidade_comercial": "UN",
+      "quantidade_comercial": 1.0,
+      "valor_unitario_comercial": 150.00,
+      "valor_total_bruto": 150.00,
+      "icms_cst": "102"
+    }
+  ]
+}
+```
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+### 2. Cancelar NFe
+- URL: `POST /api/nfe/cancelar`
+- Header: `Content-Type: application/json`
+- Payload de Exemplo:
 
-## Contributing
+```json
+{
+  "id_lote": "1",
+  "c_orgao": "35",
+  "cnpj": "12345678000195",
+  "chave_nfe": "35240812345678000195550010000001011000001010",
+  "data_hora_evento": "2026-08-04T13:00:00-03:00",
+  "numero_protocolo": "135240001234567",
+  "justificativa": "Cancelamento solicitado pelo cliente devido a erro no pedido"
+}
+```
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+---
 
-## Code of Conduct
+## Requisitos e Instalação Local
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+1. Clonar o Repositório:
+   ```bash
+   git clone https://github.com/usuario/php-nfe.git
+   cd php-nfe
+   ```
 
-## Security Vulnerabilities
+2. Instalar Dependências:
+   ```bash
+   composer install
+   ```
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+3. Configurar Ambiente:
+   ```bash
+   cp .env.example .env
+   php artisan key:generate
+   ```
 
-## License
+4. Executar a Aplicação:
+   ```bash
+   php artisan serve
+   ```
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+---
+
+## Documentação Complementar
+
+- [`AGENT.md`](file:///home/gabriel/Documents/git/php-nfe/AGENT.md) — Diretrizes arquiteturais e regras para desenvolvimento.
+- [`CONCEITOS_ARQUITETURA.md`](file:///home/gabriel/Documents/git/php-nfe/CONCEITOS_ARQUITETURA.md) — Guia didático explicando o papel de Entidades, DTOs, Ports e Adapters.
+- [`.system/PLANO_MIGRACAO.md`](file:///home/gabriel/Documents/git/php-nfe/.system/PLANO_MIGRACAO.md) — Roteiro de migração e histórico de etapas.
