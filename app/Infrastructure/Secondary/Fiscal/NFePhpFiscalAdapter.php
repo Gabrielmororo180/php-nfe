@@ -202,6 +202,7 @@ class NFePhpFiscalAdapter implements NFeFiscalGatewayInterface
                 $std = new \stdClass();
                 $std->item = $nItem;
                 $std->cProd = $prod->codigo;
+                $std->cEAN = 'SEM GTIN';
                 $std->xProd = $prod->descricao;
                 $std->NCM = $prod->ncm;
                 $std->CFOP = $prod->cfop;
@@ -209,6 +210,7 @@ class NFePhpFiscalAdapter implements NFeFiscalGatewayInterface
                 $std->qCom = $prod->quantidadeComercial;
                 $std->vUnCom = $prod->valorUnitarioComercial;
                 $std->vProd = $prod->valorTotalBruto;
+                $std->cEANTrib = 'SEM GTIN';
                 $std->uTrib = $prod->unidadeComercial;
                 $std->qTrib = $prod->quantidadeComercial;
                 $std->vUnTrib = $prod->valorUnitarioComercial;
