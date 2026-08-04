@@ -16,71 +16,44 @@ class NFe
      * @param Produto[] $produtos
      */
     public function __construct(
-        string|IdentificacaoNFe $modeloOrIdentificacao,
-        int|Emitente $serieOrEmitente,
-        int|Destinatario $numeroOrDestinatario,
-        string|array $naturezaOperacaoOrProdutos,
-        Emitente|float|TotalNFe $emitenteOrValorTotal = 0.0,
-        ?Destinatario $destinatario = null,
-        array $produtos = [],
-        float $valorTotal = 0.0,
+        public readonly string $modelo,
+        public readonly int $serie,
+        public readonly int $numero,
+        public readonly string $naturezaOperacao,
+        public readonly Emitente $emitente,
+        public readonly Destinatario $destinatario,
+        public readonly array $produtos,
+        public readonly float $valorTotal,
+        ?IdentificacaoNFe $identificacao = null,
+        ?TotalNFe $total = null,
         public readonly ?string $chaveAcesso = null,
         public readonly string $status = 'RASCUNHO'
     ) {
-        if ($modeloOrIdentificacao instanceof IdentificacaoNFe) {
-            $this->identificacao = $modeloOrIdentificacao;
-            $this->emitente = $serieOrEmitente;
-            $this->destinatario = $numeroOrDestinatario;
-            $this->produtos = $naturezaOperacaoOrProdutos;
-            if ($emitenteOrValorTotal instanceof TotalNFe) {
-                $this->total = $emitenteOrValorTotal;
-            } else {
-                $this->total = new TotalNFe(valorNota: (float) $emitenteOrValorTotal);
-            }
-        } else {
-            $this->identificacao = new IdentificacaoNFe(
-                naturezaOperacao: (string) $naturezaOperacaoOrProdutos,
-                serie: (string) $serieOrEmitente,
-                numero: (string) $numeroOrDestinatario,
-                dataEmissao: date('Y-m-d\TH:i:sP'),
-                tipoDocumento: (string) $modeloOrIdentificacao
-            );
-            $this->emitente = $emitenteOrValorTotal;
-            $this->destinatario = $destinatario;
-            $this->produtos = $produtos;
-            $this->total = new TotalNFe(valorNota: $valorTotal);
-        }
+        $this->identificacao = $identificacao ?? new IdentificacaoNFe(
+            naturezaOperacao: $this->naturezaOperacao,
+            serie: (string) $this->serie,
+            numero: (string) $this->numero,
+            dataEmissao: date('Y-m-d\TH:i:sP'),
+            tipoDocumento: $this->modelo
+        );
+
+        $this->total = $total ?? new TotalNFe(
+            valorProdutos: $this->calcularValorProdutos(),
+            valorNota: $this->valorTotal
+        );
 
         $this->validar();
     }
 
-    public readonly Emitente $emitente;
-    public readonly Destinatario $destinatario;
-    public readonly array $produtos;
-
-    public function getModelo(): string
+    private function calcularValorProdutos(): float
     {
-        return $this->identificacao->tipoDocumento;
-    }
-
-    public function getSerie(): int
-    {
-        return (int) $this->identificacao->serie;
-    }
-
-    public function getNumero(): int
-    {
-        return (int) $this->identificacao->numero;
-    }
-
-    public function getNaturezaOperacao(): string
-    {
-        return $this->identificacao->naturezaOperacao;
-    }
-
-    public function getValorTotal(): float
-    {
-        return $this->total->valorNota;
+        $total = 0.0;
+        foreach ($this->produtos as $produto) {
+            if ($produto instanceof Produto) {
+                $total += $produto->valorTotalBruto;
+            }
+        }
+        return $total;
     }
 
     /**
@@ -92,7 +65,7 @@ class NFe
             throw new DomainException("NFe must contain at least one product.");
         }
 
-        if ($this->total->valorNota <= 0) {
+        if ($this->valorTotal <= 0) {
             throw new DomainException("NFe total amount must be greater than zero.");
         }
     }
