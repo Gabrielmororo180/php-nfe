@@ -56,4 +56,25 @@ class Impostos
             );
         }
     }
+
+    /**
+     * Magic property accessor for backwards compatibility.
+     */
+    public function __get(string $name): mixed
+    {
+        return match ($name) {
+            'icmsCst' => $this->icms->cst,
+            'icmsAliquota' => $this->icms->aliquota,
+            'pisCst' => $this->pis->cst,
+            'pisAliquota' => $this->pis->aliquota,
+            'cofinsCst' => $this->cofins->cst,
+            'cofinsAliquota' => $this->cofins->aliquota,
+            default => null,
+        };
+    }
+
+    public function __isset(string $name): bool
+    {
+        return in_array($name, ['icmsCst', 'icmsAliquota', 'pisCst', 'pisAliquota', 'cofinsCst', 'cofinsAliquota'], true);
+    }
 }

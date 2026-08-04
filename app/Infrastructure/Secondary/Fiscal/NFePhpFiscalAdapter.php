@@ -138,7 +138,7 @@ class NFePhpFiscalAdapter implements NFeFiscalGatewayInterface
                 $std = new \stdClass();
                 $std->item = $nItem;
                 $std->orig = 0;
-                $std->CSOSN = $prod->impostos->icmsCst;
+                $std->CSOSN = $prod->impostos->icms->cst ?? '102';
                 $make->tagICMSSN($std);
             }
 
